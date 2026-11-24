@@ -1,0 +1,207 @@
+---
+title: "Lab 01 — Probability distributions in R"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+source("lab_submission.R")
+disc <- read.csv("data/discoveries.csv")
+len  <- read.csv("data/rivers.csv")$length_miles
+lambda <- mean(disc$count)
+lab_meta <- list(id = "lab01", title = "Probability distributions in R", open = c("q9", "q10"))
+lab_prompts <- c(
+  q1  = "A student guesses all 20 questions of a test with 4 options each. The probability of exactly 8 right answers is about...",
+  q2  = "For the same test, the probability of getting at least 10 right answers is about...",
+  q3  = "A fair die is rolled until the first six. The probability that the first six appears on roll 4 or later is...",
+  q4  = "With lambda = 3.1 discoveries per year, the probability of 7 or more discoveries in a year is about...",
+  q5  = "Exam marks are N(65, 12^2). The proportion of students above 80 is about...",
+  q6  = "For the same marks, the mark that separates the top 10% is about...",
+  q7  = "A device has an exponential lifetime with mean 500 hours. P(T > 800) is...",
+  q8  = "Calls arrive at a rate of 4 per hour. pgamma(1, shape = 3, rate = 4) = 0.762 is the probability that...",
+  q9  = "A gamma model is fitted to the river lengths by matching the mean and variance. Compare the fraction of rivers longer than 1000 miles with the probability under the fitted gamma. Is the gamma a good model in the right tail?",
+  q10 = "A device has survived 300 hours. Using the exponential model with mean 500 hours, what is P(T > 800 | T > 300)? Which property of the exponential distribution explains it?"
+)
+```
+
+## What you will do
+
+Check the numbers from the lab, then answer the questions. `disc` has the yearly counts of discoveries (`disc$count`, mean `lambda`), and `len` the 141 river lengths. Finish by downloading the `.txt` file.
+
+## Binomial and geometric
+
+```{r bin-ex, exercise=TRUE, exercise.lines=6}
+dbinom(8, 20, 0.25)
+1 - pbinom(9, 20, 0.25)
+qbinom(0.95, 20, 0.25)
+1 - pgeom(2, 1/6)
+```
+
+```{r q1}
+question(
+  lab_prompts[["q1"]],
+  answer("0.061", correct = TRUE),
+  answer("0.25"),
+  answer("0.40"),
+  answer("0.0139"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q2}
+question(
+  lab_prompts[["q2"]],
+  answer("0.014", correct = TRUE),
+  answer("0.049"),
+  answer("0.986"),
+  answer("0.101"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q3}
+question(
+  lab_prompts[["q3"]],
+  answer("(5/6)^3 = 0.579, i.e. 1 - pgeom(2, 1/6)", correct = TRUE),
+  answer("(5/6)^4 = 0.482"),
+  answer("1 - pgeom(3, 1/6) = 0.482"),
+  answer("(1/6)^3 = 0.005"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Poisson, normal and exponential
+
+```{r cont-ex, exercise=TRUE, exercise.lines=8}
+ppois(5, lambda)
+1 - ppois(6, lambda)
+1 - pnorm(80, 65, 12)
+qnorm(0.9, 65, 12)
+1 - pexp(800, rate = 1/500)
+pgamma(1, shape = 3, rate = 4)
+```
+
+```{r q4}
+question(
+  lab_prompts[["q4"]],
+  answer("0.039", correct = TRUE),
+  answer("0.906"),
+  answer("0.094"),
+  answer("0.45"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q5}
+question(
+  lab_prompts[["q5"]],
+  answer("0.106", correct = TRUE),
+  answer("0.894"),
+  answer("0.211"),
+  answer("0.5"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q6}
+question(
+  lab_prompts[["q6"]],
+  answer("80.4", correct = TRUE),
+  answer("77.0"),
+  answer("86.2"),
+  answer("73.1"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q7}
+question(
+  lab_prompts[["q7"]],
+  answer("exp(-800/500) = 0.202", correct = TRUE),
+  answer("exp(-500/800) = 0.535"),
+  answer("1 - exp(-800/500) = 0.798"),
+  answer("800/500 = 1.6"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q8}
+question(
+  lab_prompts[["q8"]],
+  answer("the third call arrives within the first hour, which equals P(at least 3 calls in an hour)", correct = TRUE),
+  answer("exactly 3 calls arrive in one hour"),
+  answer("the first call arrives within 3 hours"),
+  answer("the mean waiting time is 0.762 hours"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Real data
+
+```{r riv-ex, exercise=TRUE, exercise.lines=8}
+m <- mean(len); v <- var(len)
+shape <- m^2 / v; rate <- m / v
+c(shape = shape, rate = rate)
+c(data = mean(len > 1000), gamma = 1 - pgamma(1000, shape, rate))
+```
+
+```{r q9}
+question_text(
+  lab_prompts[["q9"]],
+  open_answer(),
+  placeholder = "Give both numbers and your conclusion...",
+  trim = TRUE
+)
+```
+
+```{r q10}
+question_text(
+  lab_prompts[["q10"]],
+  open_answer(),
+  placeholder = "Give the value and name the property...",
+  trim = TRUE
+)
+```
+
+
+## Submit
+
+Type your name, download the text file, and upload it. Submit the questions first so the file contains your answers. If nothing downloads, the same `.txt` is in this folder: select it in the Files pane and choose Export.
+
+```{r submit-ui, echo=FALSE}
+shiny::textInput("student_name", "Your name", placeholder = "Name Surname")
+shiny::downloadButton("download_txt", "Download submission .txt")
+```
+
+```{r submit-server, context="server"}
+output$download_txt <- shiny::downloadHandler(
+  filename = function() lab_submission_filename(input$student_name, lab_meta$id),
+  content = function(file) {
+    write_lab_submission(
+      path = file,
+      name = input$student_name,
+      lab_id = lab_meta$id,
+      lab_title = lab_meta$title,
+      state = learnr::get_tutorial_state(),
+      prompts = lab_prompts,
+      open = lab_meta$open
+    )
+    # The viewer in Posit Cloud often blocks the browser download.
+    file.copy(
+      file,
+      lab_submission_filename(input$student_name, lab_meta$id),
+      overwrite = TRUE
+    )
+  }
+)
+```

@@ -1,0 +1,264 @@
+---
+title: "Lab 04 — ANOVA and linear regression"
+subtitle: "Session 30: one-way, block and two-way ANOVA; simple and multiple regression"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# Learning goals
+
+In this lab you will:
+
+- fit a one-way ANOVA with `aov()`, read the ANOVA table, and make pairwise comparisons with `TukeyHSD()`;
+- check the assumptions: normal residuals and equal variances (Bartlett and Levene tests);
+- analyse a randomized block design and a two-way ANOVA with interaction;
+- fit simple and multiple regressions with `lm()` and use `summary()`, `confint()` and `predict()`;
+- check the model with residual diagnostics.
+
+Work in pairs. Plan for 75–90 minutes.
+
+# Setup
+
+```{r}
+plants <- read.csv("data/PlantGrowth.csv", stringsAsFactors = TRUE)   # weight, group
+npk    <- read.csv("data/npk.csv")                                     # block, N, P, K, yield
+tooth  <- read.csv("data/ToothGrowth.csv")                             # len, supp, dose
+mt     <- read.csv("data/mtcars.csv")                                  # 32 cars
+wb     <- read.csv("data/warpbreaks.csv", stringsAsFactors = TRUE)
+wb$tension <- factor(wb$tension, levels = c("L", "M", "H"))   # natural order, not alphabetical
+str(plants)
+```
+
+# One-way ANOVA
+
+`PlantGrowth` records the dried weight of 30 plants in three conditions: a control and two treatments.
+
+```{r}
+boxplot(weight ~ group, data = plants, ylab = "dry weight", xlab = "condition")
+aggregate(weight ~ group, data = plants, function(x) c(mean = mean(x), sd = sd(x), n = length(x)))
+```
+
+The model is $y_{ij}=\mu+\tau_i+\varepsilon_{ij}$ with $\varepsilon_{ij}\sim N(0,\sigma^2)$. The null hypothesis is $H_0:\tau_1=\tau_2=\tau_3=0$.
+
+```{r}
+fit1 <- aov(weight ~ group, data = plants)
+summary(fit1)
+```
+
+Reading the table: the $F$ statistic is the ratio of the between-groups mean square to the within-groups mean square; we can compute it by hand.
+
+```{r}
+y <- plants$weight; g <- plants$group
+n_i <- table(g); ybar_i <- tapply(y, g, mean); ybar <- mean(y)
+SSTr <- sum(n_i * (ybar_i - ybar)^2)        # treatment (between-groups) sum of squares
+SSE  <- sum((y - ybar_i[g])^2)             # error (within-groups) sum of squares
+Fstat <- (SSTr / 2) / (SSE / 27)
+c(SSTr = SSTr, SSE = SSE, F = Fstat, p = pf(Fstat, 2, 27, lower.tail = FALSE))
+```
+
+The ANOVA $F$ test tells us that some means differ, but not which. Tukey's honest significant difference method compares all pairs and controls the overall error rate:
+
+```{r}
+tuk <- TukeyHSD(fit1)
+tuk
+plot(tuk)
+```
+
+For comparison, pairwise $t$ tests with a multiplicity correction:
+
+```{r}
+pairwise.t.test(plants$weight, plants$group, p.adjust.method = "bonferroni")
+```
+
+## Assumptions
+
+```{r}
+par(mfrow = c(1, 2))
+plot(fit1, which = 1)      # residuals vs fitted: equal spread?
+plot(fit1, which = 2)      # normal Q-Q plot
+par(mfrow = c(1, 1))
+shapiro.test(residuals(fit1))
+bartlett.test(weight ~ group, data = plants)
+```
+
+Levene's test is less sensitive to non-normality. It is in the `car` package (optional), but it is simply an ANOVA on the absolute deviations from the group medians:
+
+```{r}
+dev <- abs(plants$weight - ave(plants$weight, plants$group, FUN = median))
+summary(aov(dev ~ group, data = plants))        # Brown-Forsythe / Levene test
+if (requireNamespace("car", quietly = TRUE)) car::leveneTest(weight ~ group, data = plants)
+```
+
+If the variances are not equal, use `oneway.test(weight ~ group, data = plants)` (Welch) or `kruskal.test()`.
+
+```{r}
+oneway.test(weight ~ group, data = plants)
+kruskal.test(weight ~ group, data = plants)
+```
+
+**Your turn.** Which pairs of conditions differ at the 5% level according to Tukey? Write the conclusion in one sentence and state whether the assumptions are reasonable.
+
+# Randomized block design
+
+The `npk` experiment studies the effect of nitrogen (N) on pea yield. The field is divided into 6 blocks of homogeneous soil; each block contains 4 plots. We study N and treat the blocks as a nuisance factor.
+
+```{r}
+npk$block <- factor(npk$block)
+npk$N <- factor(npk$N, labels = c("no N", "N"))
+summary(aov(yield ~ N, data = npk))               # ignores the blocks
+fit_b <- aov(yield ~ block + N, data = npk)
+summary(fit_b)                                    # blocks remove variability
+```
+
+Blocking reduces the residual mean square, and the nitrogen effect becomes more precise. The effect of the treatment, adjusted for blocks:
+
+```{r}
+model.tables(fit_b, "means")$tables$N
+TukeyHSD(fit_b, "N")
+boxplot(yield ~ block, data = npk, xlab = "block", ylab = "yield")
+```
+
+**Your turn.** Repeat the analysis for the factor `P` (phosphate): fit `yield ~ block + P` and compare with `yield ~ P`. Does blocking change the conclusion?
+
+# Two-way ANOVA with interaction
+
+`ToothGrowth`: tooth length for two supplements (orange juice and ascorbic acid) at three doses.
+
+```{r}
+tooth$dose <- factor(tooth$dose)
+tooth$supp <- factor(tooth$supp)
+with(tooth, interaction.plot(dose, supp, len, ylab = "mean length", trace.label = "supplement"))
+fit2 <- aov(len ~ supp * dose, data = tooth)
+summary(fit2)
+```
+
+The terms are the main effect of `supp`, the main effect of `dose`, and the interaction `supp:dose`. If the interaction is significant, the effect of one factor depends on the level of the other, and the main effects cannot be interpreted alone. Compare with the additive model:
+
+```{r}
+fit2_add <- aov(len ~ supp + dose, data = tooth)
+anova(fit2_add, fit2)
+TukeyHSD(fit2, "dose")
+tapply(tooth$len, list(tooth$supp, tooth$dose), mean)
+```
+
+```{r}
+par(mfrow = c(1, 2)); plot(fit2, which = 1:2); par(mfrow = c(1, 1))
+```
+
+**Your turn.** Analyse `warpbreaks` (`breaks ~ wool * tension`): draw the interaction plot, fit the model and decide whether the interaction is significant.
+
+# Simple linear regression
+
+Fuel consumption against weight for 32 cars: $\texttt{mpg}_i=\beta_0+\beta_1\texttt{wt}_i+\varepsilon_i$.
+
+```{r}
+plot(mpg ~ wt, data = mt, pch = 19, xlab = "weight (1000 lb)", ylab = "mpg")
+fit_s <- lm(mpg ~ wt, data = mt)
+abline(fit_s, col = "red", lwd = 2)
+summary(fit_s)
+```
+
+The `summary()` gives the estimates with standard errors, $t$ tests of $H_0:\beta_j=0$, the residual standard error, $R^2$ and the overall $F$ test.
+
+```{r}
+coef(fit_s)
+confint(fit_s)                                  # 95% intervals for the coefficients
+cor(mt$wt, mt$mpg)^2                            # R^2 = r^2 in simple regression
+
+# by hand
+x <- mt$wt; y <- mt$mpg
+b1 <- cov(x, y) / var(x); b0 <- mean(y) - b1 * mean(x)
+c(b0 = b0, b1 = b1)
+```
+
+Prediction: for a car weighing 3000 lb (`wt = 3`):
+
+```{r}
+new <- data.frame(wt = 3)
+predict(fit_s, new)
+predict(fit_s, new, interval = "confidence")    # interval for the mean mpg at wt = 3
+predict(fit_s, new, interval = "prediction")    # interval for a single new car
+```
+
+The prediction interval is wider: it includes the variability of an individual car around the mean.
+
+```{r}
+wts <- data.frame(wt = seq(1.5, 5.5, length.out = 100))
+ci <- predict(fit_s, wts, interval = "confidence")
+pint <- predict(fit_s, wts, interval = "prediction")
+plot(mpg ~ wt, data = mt, pch = 19, ylim = range(pint), xlab = "weight", ylab = "mpg")
+lines(wts$wt, ci[, "fit"], lwd = 2)
+lines(wts$wt, ci[, "lwr"], col = "blue", lty = 2); lines(wts$wt, ci[, "upr"], col = "blue", lty = 2)
+lines(wts$wt, pint[, "lwr"], col = "red", lty = 3);  lines(wts$wt, pint[, "upr"], col = "red", lty = 3)
+```
+
+## Residual diagnostics
+
+```{r}
+par(mfrow = c(2, 2)); plot(fit_s); par(mfrow = c(1, 1))
+```
+
+The four plots: residuals against fitted values (look for curvature or changing spread), normal Q-Q, scale-location, and residuals against leverage with Cook's distance (influential points). The residual plot shows slight curvature: the relation is not perfectly linear.
+
+```{r}
+shapiro.test(residuals(fit_s))
+fit_log <- lm(log(mpg) ~ log(wt), data = mt)
+summary(fit_log)$r.squared
+```
+
+**Your turn.** Regress `mpg` on `hp`. Report the slope with its 95% interval, $R^2$, and the predicted `mpg` for a car with 150 hp. Is the linear model adequate?
+
+# Multiple regression
+
+Add horsepower as a second predictor.
+
+```{r}
+fit_m <- lm(mpg ~ wt + hp, data = mt)
+summary(fit_m)
+confint(fit_m)
+anova(fit_s, fit_m)                  # F test for adding hp
+```
+
+Interpretation: the coefficient of `wt` is the change in mpg for one extra 1000 lb, **holding `hp` fixed**. $R^2$ never decreases when adding predictors, so compare models with the adjusted $R^2$, AIC, or the $F$ test.
+
+```{r}
+fit_m2 <- lm(mpg ~ wt + hp + factor(am), data = mt)
+summary(fit_m2)$coefficients
+c(simple = summary(fit_s)$adj.r.squared,
+  wt_hp = summary(fit_m)$adj.r.squared,
+  wt_hp_am = summary(fit_m2)$adj.r.squared)
+AIC(fit_s, fit_m, fit_m2)
+predict(fit_m, data.frame(wt = 3, hp = 120), interval = "prediction")
+par(mfrow = c(2, 2)); plot(fit_m); par(mfrow = c(1, 1))
+```
+
+Predictors that are strongly correlated make the individual coefficients unstable (multicollinearity):
+
+```{r}
+round(cor(mt[, c("mpg", "wt", "hp", "disp", "drat")]), 2)
+```
+
+**Your turn.** Fit `mpg ~ wt + hp + disp`. What happens to the significance of `disp` and `wt`? Compare with the correlation matrix and explain.
+
+# Connecting ANOVA and regression
+
+A one-way ANOVA is a regression on indicator variables:
+
+```{r}
+fit_lm <- lm(weight ~ group, data = plants)
+anova(fit_lm)
+summary(aov(weight ~ group, data = plants))
+coef(fit_lm)           # the intercept is the control mean; the others are differences
+```
+
+The two give the same $F$ test.
+
+# Wrap-up
+
+For comparing means across groups: `aov()`, `TukeyHSD()`, residual checks; add blocks to remove nuisance variability and interactions when factors work together. For quantitative predictors: `lm()`, `summary()`, `confint()`, `predict()`, and always plot the residuals.

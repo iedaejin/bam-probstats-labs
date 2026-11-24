@@ -1,0 +1,8 @@
+rivers.csv
+  Source: R package 'datasets', object 'rivers': lengths (miles) of 141 major North American rivers.
+  Original source: World Almanac and Book of Facts, 1975, page 406. Reference: McNeil, D. R. (1977) Interactive Data Analysis. Wiley.
+  Column: length_miles. Values unchanged; written with write.csv(data.frame(length_miles = rivers), row.names = FALSE).
+
+  License: the 'datasets' package is part of R, GNU General Public License, version 2 or 3 (GPL-2 | GPL-3).
+
+The lab text is course material for Probability and Statistics (BAM), IE University. It is not a work of the dataset authors.

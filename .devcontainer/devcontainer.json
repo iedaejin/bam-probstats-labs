@@ -1,0 +1,14 @@
+{
+  "name": "Probability and Statistics Labs (BAM)",
+  "image": "ghcr.io/rocker-org/devcontainer/tidyverse:4.4",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "REditorSupport.r"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [8787],
+  "remoteUser": "rstudio"
+}

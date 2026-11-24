@@ -1,0 +1,25 @@
+mtcars.csv
+  Source: R package 'datasets' (R Core Team), object 'mtcars': road tests of 32 cars from the 1974 Motor Trend US magazine.
+  Reference: Henderson and Velleman (1981) Building multiple regression models interactively. Biometrics 37, 391-411.
+  Columns: car (model name, from the row names), mpg, cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb. Values unchanged;
+  written with write.csv(data.frame(car = rownames(mtcars), mtcars, row.names = NULL), row.names = FALSE).
+
+PlantGrowth.csv
+  Source: R package 'datasets', object 'PlantGrowth': dried weight of 30 plants under a control and two treatment conditions.
+  Reference: Dobson, A. J. (1983) An Introduction to Statistical Modelling. Chapman and Hall. Columns: weight, group (ctrl, trt1, trt2). Values unchanged.
+
+npk.csv
+  Source: R package 'datasets', object 'npk': classical N, P, K factorial experiment on the growth of peas, in 6 blocks of 4 plots.
+  Reference: Originally from Yates and others; see Venables and Ripley (2002) Modern Applied Statistics with S. Columns: block, N, P, K (0/1), yield. Values unchanged.
+
+warpbreaks.csv
+  Source: R package 'datasets', object 'warpbreaks': number of warp breaks per loom (breaks) for two types of wool (A, B) and three tension levels (L, M, H).
+  Reference: Tippett, L. H. C. (1950) Technological Applications of Statistics. Williams and Norgate. Values unchanged.
+
+ToothGrowth.csv
+  Source: R package 'datasets', object 'ToothGrowth' (see Lab_03_Inference/data/SOURCE.txt). Values unchanged.
+
+  License: the 'datasets' package is part of R, GNU General Public License, version 2 or 3 (GPL-2 | GPL-3).
+
+The lab text is course material for Probability and Statistics (BAM), IE University. It is not a work of the dataset authors.
+

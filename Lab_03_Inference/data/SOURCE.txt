@@ -1,0 +1,17 @@
+sleep.csv
+  Source: R package 'datasets', object 'sleep': extra hours of sleep gained by 10 patients under two soporific drugs (group 1, 2).
+  Reference: Student (1908) The probable error of a mean. Biometrika 6, 1-25. Columns: extra, group, ID. Values unchanged.
+
+ToothGrowth.csv
+  Source: R package 'datasets', object 'ToothGrowth': tooth length (len) of 60 guinea pigs given vitamin C as orange juice (OJ) or ascorbic acid (VC) at 0.5, 1 and 2 mg/day (dose).
+  Reference: Crampton, E. W. (1947) The growth of the odontoblast of the incisor teeth as a criterion of vitamin C intake of the guinea pig. Journal of Nutrition 33, 491-504. Values unchanged.
+
+survey.csv
+  Source: R package 'MASS' (Venables and Ripley), object 'survey': a survey of 237 first-year statistics students at the University of Adelaide
+  (Sex, Wr.Hnd, NW.Hnd, W.Hnd, Fold, Pulse, Clap, Exer, Smoke, Height, M.I, Age). Reference: Venables, W. N. and Ripley, B. D. (2002) Modern Applied Statistics with S. Springer.
+  Values unchanged. License: MASS is distributed under GPL-2 | GPL-3.
+
+  License: the 'datasets' package is part of R, GNU General Public License, version 2 or 3 (GPL-2 | GPL-3).
+
+The lab text is course material for Probability and Statistics (BAM), IE University. It is not a work of the dataset authors.
+

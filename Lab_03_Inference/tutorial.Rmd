@@ -1,0 +1,215 @@
+---
+title: "Lab 03 — Statistical inference in R"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+source("lab_submission.R")
+survey <- read.csv("data/survey.csv")
+sleep  <- read.csv("data/sleep.csv")
+tooth  <- read.csv("data/ToothGrowth.csv")
+h <- na.omit(survey$Height)
+set.seed(2027)
+lab_meta <- list(id = "lab03", title = "Statistical inference in R", open = c("q10"))
+lab_prompts <- c(
+  q1  = "The 95% confidence interval for the mean height of the students is about...",
+  q2  = "The one-sample t test of H0: mean height = 170 gives p = 0.0006. At the 5% level...",
+  q3  = "In the Welch two-sample t test of height by sex, the estimated difference between men and women is about 13.1 cm and p < 0.001. The best interpretation is...",
+  q4  = "var.test for the height by sex gives p = 0.002. Which statement is best?",
+  q5  = "In the sleep data, the paired t test of the difference between the two drugs gives...",
+  q6  = "The unpaired Welch test on the same data gives p = 0.079. Why does the paired analysis detect the difference?",
+  q7  = "47 of the 236 students who answered smoke (anything other than Never). The 95% confidence interval for the proportion of smokers is about...",
+  q8  = "A die is rolled 120 times and the counts of faces 1 to 6 are 14, 22, 17, 25, 16, 26. The chi-square goodness-of-fit test of a fair die gives...",
+  q9  = "The chi-square test of independence between smoking and exercise (Smoke by Exer) gives p = 0.48 and R warns about small expected counts. The right reading is...",
+  q10 = "In 1000 simulated samples, 95% t intervals for a mean covered the true mean in about 95% of the samples. Explain in your own words what '95% confidence' means, and say when the coverage can fall below 95% (give one situation from the lab)."
+)
+```
+
+## What you will do
+
+Check the numbers from the lab, then answer the questions. `survey`, `sleep` and `tooth` are loaded, and `h` holds the heights (cm) of the students with a recorded height. Finish by downloading the `.txt` file.
+
+## Means
+
+```{r t-ex, exercise=TRUE, exercise.lines=8}
+t.test(h)$conf.int
+t.test(h, mu = 170)
+t.test(Height ~ Sex, data = survey)
+var.test(Height ~ Sex, data = survey)
+```
+
+```{r q1}
+question(
+  lab_prompts[["q1"]],
+  answer("(171.0, 173.7) cm", correct = TRUE),
+  answer("(165.7, 178.8) cm"),
+  answer("(160.0, 185.0) cm"),
+  answer("(172.0, 172.8) cm"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q2}
+question(
+  lab_prompts[["q2"]],
+  answer("we reject H0: the data suggest a mean above 170 cm", correct = TRUE),
+  answer("we do not reject H0"),
+  answer("we accept H0 with probability 0.9994"),
+  answer("the test is invalid because p is smaller than 0.05"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q3}
+question(
+  lab_prompts[["q3"]],
+  answer("Men are taller on average by about 13 cm in this sample; if H0 were true, a difference this large would be very unlikely.", correct = TRUE),
+  answer("13.1% of men are taller than women."),
+  answer("The p-value is the probability that H0 is true."),
+  answer("Women and men have the same mean height."),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q4}
+question(
+  lab_prompts[["q4"]],
+  answer("the data suggest the variances differ, but Welch is the default regardless of any preliminary F test, so we do not choose the t test by this p-value", correct = TRUE),
+  answer("the means are different"),
+  answer("the variances are equal"),
+  answer("the t test cannot be used at all"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Paired data and proportions
+
+```{r pair-ex, exercise=TRUE, exercise.lines=10}
+x1 <- sleep$extra[sleep$group == 1]
+x2 <- sleep$extra[sleep$group == 2]
+t.test(x2, x1, paired = TRUE)
+t.test(x2, x1)$p.value
+smoke <- na.omit(survey$Smoke)
+x <- sum(smoke != "Never"); n <- length(smoke)
+c(x, n, x / n)
+prop.test(x, n)$conf.int
+```
+
+```{r q5}
+question(
+  lab_prompts[["q5"]],
+  answer("t = 4.06, df = 9, p = 0.0028: drug 2 gives about 1.6 more hours of sleep", correct = TRUE),
+  answer("t = -1.86, df = 17.8, p = 0.079: no evidence of a difference"),
+  answer("t = 4.06, df = 19, p = 0.0028"),
+  answer("the test cannot be done because the groups are not independent"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q6}
+question(
+  lab_prompts[["q6"]],
+  answer("The same patients took both drugs, and pairing removes the variability between patients.", correct = TRUE),
+  answer("The paired test uses a larger sample."),
+  answer("The paired test assumes the variances are equal."),
+  answer("The paired test is always more significant."),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q7}
+question(
+  lab_prompts[["q7"]],
+  answer("(0.151, 0.257)", correct = TRUE),
+  answer("(0.047, 0.236)"),
+  answer("(0.199, 0.236)"),
+  answer("(0.05, 0.50)"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Chi-square tests and coverage
+
+```{r chi-ex, exercise=TRUE, exercise.lines=10}
+obs <- c(14, 22, 17, 25, 16, 26)
+chisq.test(obs, p = rep(1/6, 6))
+chisq.test(table(survey$Smoke, survey$Exer))
+n <- length(h)
+sqrt((n - 1) * var(h) / qchisq(c(0.975, 0.025), n - 1))
+```
+
+```{r q8}
+question(
+  lab_prompts[["q8"]],
+  answer("X-squared = 6.3, df = 5, p = 0.28: no evidence that the die is unfair", correct = TRUE),
+  answer("X-squared = 6.3, df = 6, p = 0.39"),
+  answer("X-squared = 63, df = 5, p < 0.001"),
+  answer("p = 0.28, so the die is fair with probability 0.72"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q9}
+question(
+  lab_prompts[["q9"]],
+  answer("no evidence of an association, though the approximation is doubtful; merge categories or use a simulated p-value", correct = TRUE),
+  answer("strong evidence of an association"),
+  answer("the test is wrong and gives no result"),
+  answer("the variables are proven to be independent"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q10}
+question_text(
+  lab_prompts[["q10"]],
+  open_answer(),
+  placeholder = "Interpret the 95% as a long-run frequency...",
+  trim = TRUE
+)
+```
+
+
+## Submit
+
+Type your name, download the text file, and upload it. Submit the questions first so the file contains your answers. If nothing downloads, the same `.txt` is in this folder: select it in the Files pane and choose Export.
+
+```{r submit-ui, echo=FALSE}
+shiny::textInput("student_name", "Your name", placeholder = "Name Surname")
+shiny::downloadButton("download_txt", "Download submission .txt")
+```
+
+```{r submit-server, context="server"}
+output$download_txt <- shiny::downloadHandler(
+  filename = function() lab_submission_filename(input$student_name, lab_meta$id),
+  content = function(file) {
+    write_lab_submission(
+      path = file,
+      name = input$student_name,
+      lab_id = lab_meta$id,
+      lab_title = lab_meta$title,
+      state = learnr::get_tutorial_state(),
+      prompts = lab_prompts,
+      open = lab_meta$open
+    )
+    # The viewer in Posit Cloud often blocks the browser download.
+    file.copy(
+      file,
+      lab_submission_filename(input$student_name, lab_meta$id),
+      overwrite = TRUE
+    )
+  }
+)
+```

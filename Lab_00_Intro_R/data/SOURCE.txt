@@ -1,0 +1,9 @@
+mtcars.csv
+  Source: R package 'datasets' (R Core Team), object 'mtcars': road tests of 32 cars from the 1974 Motor Trend US magazine.
+  Reference: Henderson and Velleman (1981) Building multiple regression models interactively. Biometrics 37, 391-411.
+  Columns: car (model name, from the row names), mpg, cyl, disp, hp, drat, wt, qsec, vs, am, gear, carb. Values unchanged;
+  written with write.csv(data.frame(car = rownames(mtcars), mtcars, row.names = NULL), row.names = FALSE).
+
+  License: the 'datasets' package is part of R, GNU General Public License, version 2 or 3 (GPL-2 | GPL-3).
+
+The lab text is course material for Probability and Statistics (BAM), IE University. It is not a work of the dataset authors.

@@ -1,0 +1,208 @@
+---
+title: "Lab 04 — ANOVA and linear regression"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+source("lab_submission.R")
+plants <- read.csv("data/PlantGrowth.csv", stringsAsFactors = TRUE)
+npk <- read.csv("data/npk.csv"); npk$block <- factor(npk$block); npk$N <- factor(npk$N)
+tooth <- read.csv("data/ToothGrowth.csv"); tooth$dose <- factor(tooth$dose); tooth$supp <- factor(tooth$supp)
+mt <- read.csv("data/mtcars.csv")
+lab_meta <- list(id = "lab04", title = "ANOVA and linear regression", open = c("q9", "q10"))
+lab_prompts <- c(
+  q1  = "In the one-way ANOVA of plant weight by condition, the F test gives...",
+  q2  = "According to Tukey's HSD (95% family-wise), which pairs of conditions differ?",
+  q3  = "Bartlett's test for the plant weights gives p = 0.24. This indicates that...",
+  q4  = "In the npk data, adding the blocks to the model yield ~ N changes the test of the nitrogen effect from p = 0.022 to p = 0.007. Why?",
+  q5  = "In the two-way ANOVA len ~ supp * dose of ToothGrowth, the interaction supp:dose has F = 4.1 on 2 and 54 df, p = 0.022. This means...",
+  q6  = "In the simple regression of mpg on wt, the slope estimate and the R-squared are...",
+  q7  = "A 95% prediction interval for the mpg of a single new car weighing 3000 lb (wt = 3) is about...",
+  q8  = "In the multiple regression mpg ~ wt + hp, the coefficient of wt is -3.88. How do you interpret it?",
+  q9  = "When disp is added to mpg ~ wt + hp, its p-value is 0.93 and the standard error of wt rises from 0.63 to 1.07. Explain with the correlations among the predictors (see cor(mt[, c('wt','hp','disp')])).",
+  q10 = "Look at plot(fit) for mpg ~ wt. Which assumptions of the linear model seem reasonable and which are doubtful? Give the evidence."
+)
+```
+
+## What you will do
+
+Check the numbers from the lab, then answer the questions. The data sets `plants`, `npk`, `tooth` (with `dose` and `supp` as factors) and `mt` are loaded. Finish by downloading the `.txt` file.
+
+## One-way ANOVA
+
+```{r aov-ex, exercise=TRUE, exercise.lines=8}
+fit <- aov(weight ~ group, data = plants)
+summary(fit)
+TukeyHSD(fit)
+bartlett.test(weight ~ group, data = plants)
+```
+
+```{r q1}
+question(
+  lab_prompts[["q1"]],
+  answer("F = 4.85 on 2 and 27 df, p = 0.016: the three means are not all equal", correct = TRUE),
+  answer("F = 4.85 on 3 and 27 df, p = 0.016"),
+  answer("F = 1.88, p = 0.39"),
+  answer("F = 0.39 on 2 and 27 df, p = 0.68"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q2}
+question(
+  lab_prompts[["q2"]],
+  answer("Only trt2 and trt1 (p = 0.012)", correct = TRUE),
+  answer("All three pairs"),
+  answer("trt1 and ctrl, and trt2 and ctrl"),
+  answer("None: the ANOVA F test was not significant"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q3}
+question(
+  lab_prompts[["q3"]],
+  answer("there is no evidence against equal variances, so the ANOVA assumption is reasonable", correct = TRUE),
+  answer("the variances are proven equal"),
+  answer("the group means are equal"),
+  answer("the residuals are not normal"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Blocks and two factors
+
+```{r blk-ex, exercise=TRUE, exercise.lines=10}
+summary(aov(yield ~ N, data = npk))
+summary(aov(yield ~ block + N, data = npk))
+summary(aov(len ~ supp * dose, data = tooth))
+```
+
+```{r q4}
+question(
+  lab_prompts[["q4"]],
+  answer("Blocks absorb variability among the plots, so the residual mean square falls (31.2 to 20.2) and the test of N is more powerful.", correct = TRUE),
+  answer("Blocks increase the effect of nitrogen."),
+  answer("Blocks increase the number of observations."),
+  answer("The nitrogen effect is estimated with a different formula that ignores variance."),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q5}
+question(
+  lab_prompts[["q5"]],
+  answer("the effect of the supplement type depends on the dose, so the main effects should not be interpreted alone", correct = TRUE),
+  answer("there is no interaction"),
+  answer("only the dose has an effect"),
+  answer("the supplement has no effect"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Regression
+
+```{r lm-ex, exercise=TRUE, exercise.lines=10}
+fit <- lm(mpg ~ wt, data = mt)
+summary(fit)
+confint(fit)
+predict(fit, data.frame(wt = 3), interval = "prediction")
+fit2 <- lm(mpg ~ wt + hp, data = mt)
+summary(fit2)$adj.r.squared
+summary(lm(mpg ~ wt + hp + disp, data = mt))$coefficients
+```
+
+```{r q6}
+question(
+  lab_prompts[["q6"]],
+  answer("-5.34 mpg per 1000 lb, and R-squared = 0.753", correct = TRUE),
+  answer("-5.34 mpg per lb, and R-squared = 0.868"),
+  answer("37.29 and R-squared = 0.753"),
+  answer("-0.75 and R-squared = 0.34"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q7}
+question(
+  lab_prompts[["q7"]],
+  answer("(14.9, 27.6)", correct = TRUE),
+  answer("(20.1, 22.4), the confidence interval for the mean"),
+  answer("(21.2, 21.3)"),
+  answer("(33.5, 41.1)"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q8}
+question(
+  lab_prompts[["q8"]],
+  answer("Each additional 1000 lb lowers the expected mpg by 3.88, for cars with the same horsepower", correct = TRUE),
+  answer("Each additional 1000 lb lowers mpg by 3.88 in every case"),
+  answer("It equals the simple-regression slope"),
+  answer("Weight explains 3.88% of the variability"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q9}
+question_text(
+  lab_prompts[["q9"]],
+  open_answer(),
+  placeholder = "Think about multicollinearity...",
+  trim = TRUE
+)
+```
+
+```{r q10}
+question_text(
+  lab_prompts[["q10"]],
+  open_answer(),
+  placeholder = "Linearity, constant variance, normality, influential points...",
+  trim = TRUE
+)
+```
+
+
+## Submit
+
+Type your name, download the text file, and upload it. Submit the questions first so the file contains your answers. If nothing downloads, the same `.txt` is in this folder: select it in the Files pane and choose Export.
+
+```{r submit-ui, echo=FALSE}
+shiny::textInput("student_name", "Your name", placeholder = "Name Surname")
+shiny::downloadButton("download_txt", "Download submission .txt")
+```
+
+```{r submit-server, context="server"}
+output$download_txt <- shiny::downloadHandler(
+  filename = function() lab_submission_filename(input$student_name, lab_meta$id),
+  content = function(file) {
+    write_lab_submission(
+      path = file,
+      name = input$student_name,
+      lab_id = lab_meta$id,
+      lab_title = lab_meta$title,
+      state = learnr::get_tutorial_state(),
+      prompts = lab_prompts,
+      open = lab_meta$open
+    )
+    # The viewer in Posit Cloud often blocks the browser download.
+    file.copy(
+      file,
+      lab_submission_filename(input$student_name, lab_meta$id),
+      overwrite = TRUE
+    )
+  }
+)
+```

@@ -1,0 +1,249 @@
+---
+title: "Lab 01 — Probability distributions in R"
+subtitle: "Session 10: d, p, q and r functions"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# Learning goals
+
+In this lab you will:
+
+- use the four functions that R provides for each distribution: `d` (mass or density), `p` (cumulative probability), `q` (quantile) and `r` (random numbers);
+- work with the binomial, geometric, Poisson, uniform, normal, exponential and gamma distributions;
+- plot pmfs, pdfs and cdfs;
+- compute probabilities and quantiles, and check them against hand calculations;
+- compare a distribution with real data.
+
+Work in pairs. Plan for 60–75 minutes.
+
+# The naming rule
+
+For a distribution called `xxx`, R has `dxxx`, `pxxx`, `qxxx` and `rxxx`.
+
+| Prefix | Meaning | Discrete $X$ | Continuous $X$ |
+|---|---|---|---|
+| `d` | mass / density | $P(X=x)$ | $f(x)$ |
+| `p` | cdf | $P(X\le q)$ | $P(X\le q)$ |
+| `q` | quantile | smallest $x$ with $F(x)\ge p$ | $F^{-1}(p)$ |
+| `r` | random sample | $n$ draws | $n$ draws |
+
+| Distribution | R name | Parameters in R |
+|---|---|---|
+| Binomial $\mathrm{Bin}(n,p)$ | `binom` | `size`, `prob` |
+| Geometric | `geom` | `prob` |
+| Poisson $\mathrm{Pois}(\lambda)$ | `pois` | `lambda` |
+| Uniform $U(a,b)$ | `unif` | `min`, `max` |
+| Normal $N(\mu,\sigma^2)$ | `norm` | `mean`, `sd` (not the variance) |
+| Exponential $\mathrm{Exp}(\lambda)$ | `exp` | `rate` $=\lambda$ |
+| Gamma | `gamma` | `shape`, `rate` |
+
+**Warning.** R's geometric counts the *failures before the first success* ($x=0,1,2,\dots$). Many textbooks count the *trial* of the first success ($1,2,\dots$). The two differ by one: if $T$ is the trial number then $P(T=t)=\texttt{dgeom}(t-1,p)$.
+
+# Setup
+
+```{r}
+disc   <- read.csv("data/discoveries.csv")    # year, count
+rivers <- read.csv("data/rivers.csv")         # length_miles
+str(disc); str(rivers)
+```
+
+# Binomial
+
+$X\sim\mathrm{Bin}(10, 0.3)$: the number of successes in 10 independent trials, each with probability 0.3.
+
+```{r}
+dbinom(3, size = 10, prob = 0.3)        # P(X = 3)
+choose(10, 3) * 0.3^3 * 0.7^7           # the same by hand
+pbinom(3, 10, 0.3)                      # P(X <= 3)
+sum(dbinom(0:3, 10, 0.3))               # the same: sum of the pmf
+1 - pbinom(3, 10, 0.3)                  # P(X > 3)
+pbinom(6, 10, 0.3) - pbinom(2, 10, 0.3) # P(3 <= X <= 6)
+qbinom(0.5, 10, 0.3)                    # median
+c(mean = 10 * 0.3, var = 10 * 0.3 * 0.7)
+```
+
+Plot the pmf and the cdf:
+
+```{r}
+par(mfrow = c(1, 2))
+x <- 0:10
+plot(x, dbinom(x, 10, 0.3), type = "h", lwd = 3, xlab = "x", ylab = "P(X = x)",
+     main = "Bin(10, 0.3): pmf")
+plot(x, pbinom(x, 10, 0.3), type = "s", xlab = "x", ylab = "P(X <= x)",
+     main = "cdf")
+par(mfrow = c(1, 1))
+```
+
+**Your turn.** A multiple-choice test has 20 questions with 4 options each. A student guesses every answer. (a) Find the probability of exactly 8 right answers. (b) Find the probability of at least 10. (c) What is the smallest score that is reached or exceeded with probability at most 5%? Use `qbinom(0.95, 20, 0.25)` and think about what it returns.
+
+# Geometric
+
+How many failures before the first success when $p=0.2$?
+
+```{r}
+dgeom(0:4, 0.2)                 # P(0 failures), ..., P(4 failures)
+0.8^3 * 0.2                     # P(3 failures then a success) by hand
+pgeom(4, 0.2)                   # P(at most 4 failures) = 1 - 0.8^5
+1 - 0.8^5
+```
+
+Memorylessness: $P(X\ge 5+3\mid X\ge 5)=P(X\ge 3)$.
+
+```{r}
+(1 - pgeom(7, 0.2)) / (1 - pgeom(4, 0.2))
+1 - pgeom(2, 0.2)
+```
+
+**Your turn.** A die is rolled until the first six. What is the probability that the six appears on the 4th roll or later? Remember that R counts failures, so the first six on roll $t$ means $t-1$ failures.
+
+# Poisson
+
+$X\sim\mathrm{Pois}(\lambda)$ models counts of rare events. The `discoveries` data give the number of great discoveries per year between 1860 and 1959, with mean about 3.1.
+
+```{r}
+lambda <- mean(disc$count)
+lambda
+dpois(0:3, lambda)
+ppois(5, lambda)                        # P(X <= 5)
+1 - ppois(6, lambda)                    # P(X >= 7)
+
+obs <- table(factor(disc$count, levels = 0:10))
+exp_counts <- 100 * dpois(0:10, lambda)
+round(rbind(observed = as.numeric(obs), expected = exp_counts), 1)
+```
+
+```{r}
+barplot(as.numeric(obs) / 100, names.arg = 0:10, col = "grey85",
+        xlab = "discoveries in a year", ylab = "relative frequency")
+points(seq(0.7, by = 1.2, length.out = 11), dpois(0:10, lambda),
+       pch = 19, col = "red", type = "b")
+```
+
+The Poisson model describes the data fairly well, although years with 0 discoveries are more frequent than the model predicts (9 observed against about 4.5 expected).
+
+**Your turn.** The Poisson with $\lambda=3$ approximates $\mathrm{Bin}(100, 0.03)$. Compare `dbinom(0:6, 100, 0.03)` with `dpois(0:6, 3)` side by side.
+
+# Uniform and normal
+
+$U\sim U(0,1)$: the density is 1 on $[0,1]$. The normal density is a bell curve.
+
+```{r}
+punif(0.3, 0, 1)
+punif(2.5, min = 1, max = 4)            # (2.5 - 1) / (4 - 1)
+qunif(0.9, 1, 4)
+
+# Normal: heights with mean 170 and sd 8
+pnorm(180, mean = 170, sd = 8)          # P(X <= 180)
+pnorm(180, 170, 8) - pnorm(160, 170, 8) # P(160 < X < 180)
+qnorm(0.975)                            # about 1.96
+qnorm(c(0.05, 0.95), 170, 8)            # 5th and 95th percentiles
+pnorm((180 - 170) / 8)                  # standardising gives the same answer
+```
+
+```{r}
+par(mfrow = c(1, 2))
+curve(dnorm(x), -4, 4, lwd = 2, ylab = "density", main = "N(0, 1)")
+curve(dnorm(x, 1, 2), -4, 6, lwd = 2, col = "blue", add = TRUE)
+curve(pnorm(x), -4, 4, lwd = 2, ylab = "F(x)", main = "cdf of N(0, 1)")
+par(mfrow = c(1, 1))
+
+# The empirical rule
+pnorm(1:3) - pnorm(-(1:3))
+```
+
+Shading an area under the density:
+
+```{r}
+x <- seq(-4, 4, length.out = 400)
+plot(x, dnorm(x), type = "l", lwd = 2, ylab = "density")
+xs <- x[x <= 1]
+polygon(c(xs, rev(xs)), c(dnorm(xs), rep(0, length(xs))), col = "grey80")
+text(-1, 0.1, round(pnorm(1), 3))
+```
+
+**Your turn.** Exam marks are $N(65, 12^2)$. (a) What proportion of students score above 80? (b) What mark separates the top 10%? (c) Between which two marks (symmetric around 65) do the middle 50% lie?
+
+# Exponential and gamma
+
+$T\sim\mathrm{Exp}(\lambda)$ has $f(t)=\lambda e^{-\lambda t}$, mean $1/\lambda$ and $P(T>t)=e^{-\lambda t}$. A call centre receives on average 4 calls per hour, so waiting times between calls have rate $\lambda=4$ per hour.
+
+```{r}
+pexp(0.5, rate = 4)                     # P(wait <= 30 min)
+1 - exp(-4 * 0.5)                       # by hand
+1 - pexp(0.25, 4)                       # P(wait > 15 min)
+qexp(0.5, 4)                            # median = log(2) / 4
+log(2) / 4
+```
+
+The sum of $k$ independent exponential waiting times is gamma with shape $k$. The gamma function has mean `shape / rate` and variance `shape / rate^2`.
+
+```{r}
+pgamma(1, shape = 3, rate = 4)          # P(third call arrives within one hour)
+1 - ppois(2, 4)                         # the same event: at least 3 calls in an hour
+qgamma(c(0.25, 0.5, 0.75), shape = 3, rate = 4)
+
+curve(dgamma(x, shape = 1, rate = 1), 0, 10, lwd = 2, ylab = "density")
+curve(dgamma(x, shape = 2, rate = 1), add = TRUE, lwd = 2, col = "blue")
+curve(dgamma(x, shape = 5, rate = 1), add = TRUE, lwd = 2, col = "red")
+legend("topright", legend = paste("shape =", c(1, 2, 5)),
+       col = c("black", "blue", "red"), lwd = 2)
+```
+
+The agreement `pgamma(1, 3, 4) == 1 - ppois(2, 4)` is the Poisson–gamma link: the third event occurs before time 1 exactly when there are at least 3 events in $[0,1]$.
+
+**Your turn.** The device lifetime is $\mathrm{Exp}$ with mean 500 hours. (a) Find $P(T>800)$. (b) Find the time $t$ such that 90% of devices fail before $t$. (c) Given the device has survived 300 hours, what is $P(T>800\mid T>300)$? Compare it with $P(T>500)$.
+
+# Real data: river lengths
+
+The `rivers` dataset has the lengths of 141 North American rivers. Is a gamma distribution a sensible model?
+
+```{r}
+len <- rivers$length_miles
+summary(len)
+m <- mean(len); v <- var(len)
+shape <- m^2 / v; rate <- m / v           # method of moments
+c(shape = shape, rate = rate)
+
+hist(len, breaks = 25, freq = FALSE, col = "grey90", border = "white",
+     main = "River lengths", xlab = "miles")
+curve(dgamma(x, shape, rate), add = TRUE, col = "red", lwd = 2)
+curve(dexp(x, 1 / m), add = TRUE, col = "blue", lwd = 2)
+legend("topright", legend = c("gamma", "exponential"), col = c("red", "blue"), lwd = 2)
+```
+
+Compare quantiles of the data with those of the fitted gamma:
+
+```{r}
+probs <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+round(rbind(data = quantile(len, probs),
+            gamma = qgamma(probs, shape, rate),
+            exponential = qexp(probs, 1 / m)))
+qqplot(qgamma(ppoints(length(len)), shape, rate), len,
+       xlab = "gamma quantiles", ylab = "observed")
+abline(0, 1, col = "red")
+```
+
+**Your turn.** What fraction of the 141 rivers is longer than 1000 miles? Compare with the probability under the fitted gamma, `1 - pgamma(1000, shape, rate)`. Is the model good in the tail?
+
+# Random numbers
+
+The `r` functions simulate from a distribution. A large sample reproduces the distribution:
+
+```{r}
+set.seed(1)
+z <- rnorm(10000, mean = 170, sd = 8)
+c(mean(z), sd(z), mean(z > 180), 1 - pnorm(180, 170, 8))
+hist(z, breaks = 40, freq = FALSE, col = "grey90", border = "white", main = "")
+curve(dnorm(x, 170, 8), add = TRUE, col = "red", lwd = 2)
+```
+
+Next lab (Session 11) uses these functions for simulation.
+
+**Your turn.** Simulate 10000 values from $\mathrm{Pois}(3.1)$ with `rpois()`. Compare `table(x)/10000` with `dpois(0:10, 3.1)`.

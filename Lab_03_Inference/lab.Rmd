@@ -1,0 +1,273 @@
+---
+title: "Lab 03 — Statistical inference in R"
+subtitle: "Session 24: confidence intervals, t, proportion, variance and chi-square tests"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# Learning goals
+
+In this lab you will:
+
+- compute confidence intervals for a mean, a proportion and a variance, by hand and with R;
+- run one-sample, two-sample and paired $t$ tests with `t.test()`;
+- compare proportions with `prop.test()` and variances with `var.test()`;
+- test independence and goodness of fit with `chisq.test()`;
+- check by simulation what "95% confidence" means.
+
+Work in pairs. Plan for 75 minutes.
+
+# Setup
+
+```{r}
+sleep  <- read.csv("data/sleep.csv")           # extra, group, ID
+tooth  <- read.csv("data/ToothGrowth.csv")     # len, supp, dose
+survey <- read.csv("data/survey.csv")          # 237 students
+str(sleep)
+str(tooth)
+```
+
+# Confidence interval for a mean
+
+If $X_1,\dots,X_n$ are a sample from a normal population, a $100(1-\alpha)\%$ interval for $\mu$ is
+$$\bar x\pm t_{n-1,\alpha/2}\,\frac{s}{\sqrt n},$$
+
+where $t_{n-1,\alpha/2}$ is the point with area $\alpha/2$ to its right (`qt(1 - alpha/2, n - 1)`), the same notation as the course cheat sheet.
+
+We use the height of the students (cm) from `survey`.
+
+```{r}
+h <- na.omit(survey$Height)
+n <- length(h)
+c(n = n, mean = mean(h), sd = sd(h))
+se <- sd(h) / sqrt(n)
+mean(h) + c(-1, 1) * qt(0.975, df = n - 1) * se     # by hand
+t.test(h)$conf.int                                  # with R
+t.test(h, conf.level = 0.99)$conf.int
+```
+
+A higher confidence level gives a wider interval.
+
+**Your turn.** Compute a 90% confidence interval for the mean pulse (`survey$Pulse`, remove the missing values) by hand and with `t.test()`.
+
+# One-sample t test
+
+Test $H_0:\mu=170$ against $H_1:\mu\ne170$ for the student height.
+
+```{r}
+t.test(h, mu = 170)
+t_stat <- (mean(h) - 170) / se
+c(t = t_stat, p = 2 * pt(-abs(t_stat), n - 1))
+t.test(h, mu = 170, alternative = "greater")$p.value   # one-sided
+```
+
+Always read the output in this order: the estimate and its interval, the $t$ statistic with its degrees of freedom, the $p$-value. A small $p$-value is evidence against $H_0$; a large one is not evidence for it.
+
+```{r}
+qqnorm(h); qqline(h)       # check normality
+```
+
+**Your turn.** Test whether the mean pulse differs from 75 beats per minute.
+
+# Two independent samples
+
+Is the mean height different for men and women?
+
+```{r}
+boxplot(Height ~ Sex, data = survey, ylab = "height (cm)")
+t.test(Height ~ Sex, data = survey)                    # Welch: unequal variances
+t.test(Height ~ Sex, data = survey, var.equal = TRUE)  # pooled variance
+```
+
+The default is Welch's test, which does not assume equal variances. Compare the degrees of freedom of the two versions.
+
+Welch is the default whatever a preliminary test says. For learning the function and the $F$ output, here is the $F$ test of equal variances (it is fragile and is not used to choose between the two $t$ tests):
+
+```{r}
+var.test(Height ~ Sex, data = survey)
+```
+
+**Your turn.** In `ToothGrowth`, compare the tooth length for the two supplements (`len ~ supp`). Report the estimate of the difference, its 95% interval and the conclusion.
+
+# Paired samples
+
+In `sleep`, the same 10 patients (`ID`) took drug 1 and drug 2. The right test uses the differences.
+
+```{r}
+x1 <- sleep$extra[sleep$group == 1]
+x2 <- sleep$extra[sleep$group == 2]
+d <- x2 - x1
+round(c(mean = mean(d), sd = sd(d)), 3)
+t.test(x2, x1, paired = TRUE)
+t.test(d)                                   # the same: a one-sample test of the differences
+t.test(x2, x1)                              # wrong here: ignores the pairing
+```
+
+The paired test is much more powerful here: the patients differ a lot among themselves, and pairing removes that variability.
+
+**Your turn.** Compute a 95% interval for the mean difference by hand from `mean(d)`, `sd(d)` and `qt(0.975, 9)`. Check that it equals `t.test(d)$conf.int`.
+
+# Proportions
+
+Do first-year students smoke? In `survey`, `Smoke` has levels `Never`, `Occas`, `Regul` and `Heavy`.
+
+```{r}
+smoke <- na.omit(survey$Smoke)
+table(smoke)
+x <- sum(smoke != "Never"); n <- length(smoke)
+p_hat <- x / n
+c(x = x, n = n, p_hat = p_hat)
+
+# Wald interval; prop.test gives the Wilson interval with continuity correction
+# (prop.test(x, n, correct = FALSE) gives the plain Wilson interval)
+p_hat + c(-1, 1) * qnorm(0.975) * sqrt(p_hat * (1 - p_hat) / n)
+prop.test(x, n)$conf.int
+binom.test(x, n)$conf.int                   # exact interval
+```
+
+Test $H_0: p=0.25$:
+
+```{r}
+prop.test(x, n, p = 0.25)
+```
+
+Compare two proportions: do men and women smoke at the same rate?
+
+```{r}
+tab <- table(survey$Sex, survey$Smoke != "Never")
+tab
+prop.test(tab[, "TRUE"], rowSums(tab))
+```
+
+**Your turn.** Compute the proportion of students who exercise regularly, `Exer == "Freq"`, with a 95% interval, and test $H_0:p=0.5$.
+
+# Confidence interval for a variance
+
+For a normal sample, $\dfrac{(n-1)s^2}{\sigma^2}\sim\chi^2_{n-1}$, so
+$$\left(\frac{(n-1)s^2}{\chi^2_{n-1,\alpha/2}},\ \frac{(n-1)s^2}{\chi^2_{n-1,1-\alpha/2}}\right).$$
+
+Here $\chi^2_{n-1,a}$ is the point with area $a$ to its right: `qchisq(1 - a, n - 1)`.
+
+```{r}
+n <- length(h); s2 <- var(h)
+ci_var <- (n - 1) * s2 / qchisq(c(0.975, 0.025), df = n - 1)
+ci_var
+sqrt(ci_var)                      # interval for the standard deviation
+```
+
+Test $H_0:\sigma^2=\sigma_0^2$ with the same statistic:
+
+```{r}
+sigma0_sq <- 10^2
+chi <- (n - 1) * s2 / sigma0_sq
+c(statistic = chi, p = 2 * min(pchisq(chi, n - 1), 1 - pchisq(chi, n - 1)))
+```
+
+**Your turn.** Give a 95% interval for the standard deviation of the pulse.
+
+# Chi-square test of independence
+
+Are smoking and exercise related? Build the contingency table and test.
+
+```{r}
+tab <- table(survey$Smoke, survey$Exer)
+tab
+test <- chisq.test(tab)
+test$expected                      # expected counts under independence
+test
+```
+
+R warns when some expected counts are below 5, because the $\chi^2$ approximation is then unreliable. Merge the smokers into one category, or use a simulated $p$-value:
+
+```{r}
+smoke2 <- ifelse(survey$Smoke == "Never", "Never", "Smoker")
+tab2 <- table(smoke2, survey$Exer)
+tab2
+chisq.test(tab2)
+chisq.test(tab, simulate.p.value = TRUE, B = 10000)$p.value
+test$stdres                        # standardised residuals: which cells deviate?
+```
+
+**Your turn.** Test whether `Sex` and `W.Hnd` (writing hand) are independent.
+
+# Chi-square goodness of fit
+
+Is the die fair? Suppose it was rolled 120 times with these counts for faces 1 to 6:
+
+```{r}
+obs <- c(14, 22, 17, 25, 16, 26)
+chisq.test(obs, p = rep(1/6, 6))
+sum((obs - 20)^2 / 20)             # by hand
+```
+
+Goodness of fit to a Poisson model, using the `discoveries` counts (classes grouped so that all expected counts are at least 5: 0 and 1 together, and 5 or more).
+
+The table of years with 0–1, 2, 3, 4 and 5 or more discoveries is typed in (from `datasets::discoveries`, also used in Lab 01):
+
+```{r}
+counts <- c(`0-1` = 21, `2` = 26, `3` = 20, `4` = 12, `5+` = 21)
+sum(counts)
+lambda <- 3.1                                   # estimated from the data (mean count)
+pr <- c(ppois(1, lambda), dpois(2:4, lambda), 1 - ppois(4, lambda))
+round(sum(counts) * pr, 1)                       # expected counts, all >= 5
+round(pr, 3)
+gof <- chisq.test(counts, p = pr)
+gof
+# one parameter was estimated, so subtract one more degree of freedom
+pchisq(gof$statistic, df = length(counts) - 1 - 1, lower.tail = FALSE)
+```
+
+The degrees of freedom are the number of categories minus 1 minus the number of estimated parameters. `chisq.test` does not know that a parameter was estimated: its own p-value uses $\nu = 4$ and is too large, so use the corrected line with $\nu = 3$.
+
+**Your turn.** Is the proportion of the three `cyl` classes in a sample with counts 11, 7, 14 equal to $(1/3, 1/3, 1/3)$? Do the test.
+
+# Simulating the coverage of confidence intervals
+
+What does "95% confidence" mean? If we repeat the experiment many times, 95% of the intervals contain the true parameter.
+
+```{r}
+set.seed(2027)
+mu <- 10; sigma <- 3; n <- 15; B <- 1000
+ci <- t(replicate(B, t.test(rnorm(n, mu, sigma))$conf.int))
+covered <- ci[, 1] <= mu & mu <= ci[, 2]
+mean(covered)
+
+plot(NA, xlim = range(ci[1:50, ]), ylim = c(1, 50), xlab = "interval", ylab = "sample")
+for (i in 1:50) segments(ci[i, 1], i, ci[i, 2], i, col = ifelse(covered[i], "grey40", "red"))
+abline(v = mu, lty = 2)
+```
+
+Intervals in red miss the true mean. Coverage can fail when the assumptions fail. For a skewed population and a small sample:
+
+```{r}
+B <- 2000
+cov_skew <- replicate(B, {
+  x <- rexp(10, rate = 1)                       # true mean 1
+  ci <- t.test(x)$conf.int
+  ci[1] <= 1 & 1 <= ci[2]
+})
+mean(cov_skew)
+```
+
+and for the proportion interval with a small $n$ and $p$ near 0:
+
+```{r}
+p <- 0.05; n <- 30
+xs <- rbinom(B, n, p)
+wald <- sapply(xs, function(x) { ph <- x / n
+  ph + c(-1, 1) * 1.96 * sqrt(ph * (1 - ph) / n) })
+c(wald = mean(wald[1, ] <= p & p <= wald[2, ]),
+  wilson = mean(sapply(xs, function(x) { ci <- prop.test(x, n)$conf.int; ci[1] <= p & p <= ci[2] })))
+```
+
+**Your turn.** Repeat the first experiment with $n=5$ and with $n=100$, and with a 99% interval. Does the coverage change?
+
+# Wrap-up
+
+Choose the tool by the question and the data: one mean (`t.test(x)`), two groups (`t.test(y ~ g)`), pairs (`paired = TRUE`), proportions (`prop.test`), variances (`var.test`), tables (`chisq.test`). Always check the assumptions and report an estimate with an interval, not only a $p$-value.

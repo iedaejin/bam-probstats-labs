@@ -1,0 +1,206 @@
+---
+title: "Lab 00 — Introduction to R"
+output: learnr::tutorial
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+source("lab_submission.R")
+mt <- read.csv("data/mtcars.csv")
+mt$am <- factor(mt$am, labels = c("automatic", "manual"))
+set.seed(2027)
+lab_meta <- list(id = "lab00", title = "Introduction to R", open = c("q6", "q10"))
+lab_prompts <- c(
+  q1  = "What is the mean mpg of the cars with a manual transmission?",
+  q2  = "Which car has the largest horsepower (hp)?",
+  q3  = "Which expression gives the proportion of cars with mpg larger than 25?",
+  q4  = "The mean mpg for 4, 6 and 8 cylinders (tapply on cyl) is, in this order, about...",
+  q5  = "The coefficient of variation sd(x)/mean(x) of mpg, computed with the function cv(), is about...",
+  q6  = "Plot mpg against wt for the cars. Describe the relationship (direction, shape, strength) in one or two sentences.",
+  q7  = "The probability of at least one six in four rolls of a fair die is...",
+  q8  = "What does set.seed(2027) do?",
+  q9  = "What happens when you run sample(1:6, 10)?",
+  q10 = "After 6000 simulated rolls the relative frequencies are near 1/6 but not exactly 1/6. Why? What would you change to get closer, and how much closer?"
+)
+```
+
+## What you will do
+
+Check the numbers from the lab, then answer the questions. The data frame `mt` (the 32 cars of `mtcars`, with `am` as a factor) is already loaded. Finish by downloading the `.txt` file.
+
+## Data frames
+
+```{r df-ex, exercise=TRUE, exercise.lines=6}
+mean(mt$mpg[mt$am == "manual"])
+tapply(mt$mpg, mt$am, mean)
+mt$car[which.max(mt$hp)]
+tapply(mt$mpg, mt$cyl, mean)
+```
+
+```{r q1}
+question(
+  lab_prompts[["q1"]],
+  answer("24.39", correct = TRUE),
+  answer("17.15"),
+  answer("20.09"),
+  answer("19.74"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q2}
+question(
+  lab_prompts[["q2"]],
+  answer("Maserati Bora", correct = TRUE),
+  answer("Ford Pantera L"),
+  answer("Cadillac Fleetwood"),
+  answer("Camaro Z28"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q3}
+question(
+  lab_prompts[["q3"]],
+  answer("mean(mt$mpg > 25)", correct = TRUE),
+  answer("sum(mt$mpg > 25)"),
+  answer("mean(mt$mpg[mt$mpg > 25])"),
+  answer("length(mt$mpg > 25) / 25"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q4}
+question(
+  lab_prompts[["q4"]],
+  answer("26.7, 19.7, 15.1", correct = TRUE),
+  answer("15.1, 19.7, 26.7"),
+  answer("20.1, 20.1, 20.1"),
+  answer("24.4, 17.1, 20.1"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+## Functions and plots
+
+```{r fun-ex, exercise=TRUE, exercise.lines=6}
+cv <- function(x) sd(x) / mean(x)
+cv(mt$mpg)
+standardize <- function(x) (x - mean(x)) / sd(x)
+round(c(mean(standardize(mt$mpg)), sd(standardize(mt$mpg))), 10)
+```
+
+```{r q5}
+question(
+  lab_prompts[["q5"]],
+  answer("0.30", correct = TRUE),
+  answer("3.03"),
+  answer("6.03"),
+  answer("0.09"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q6}
+question_text(
+  lab_prompts[["q6"]],
+  open_answer(),
+  placeholder = "Direction, shape and strength of the scatter plot...",
+  trim = TRUE
+)
+```
+
+## Simulation with `sample()`
+
+```{r sim-ex, exercise=TRUE, exercise.lines=8}
+set.seed(2027)
+rolls <- sample(1:6, 6000, replace = TRUE)
+table(rolls) / 6000
+mean(replicate(10000, any(sample(1:6, 4, replace = TRUE) == 6)))
+1 - (5/6)^4
+```
+
+```{r q7}
+question(
+  lab_prompts[["q7"]],
+  answer("1 - (5/6)^4 = 0.518", correct = TRUE),
+  answer("4/6 = 0.667"),
+  answer("(1/6)^4 = 0.0008"),
+  answer("4 * (1/6) = 0.667, by adding the four probabilities"),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q8}
+question(
+  lab_prompts[["q8"]],
+  answer("It makes the random numbers reproducible: the same code gives the same results.", correct = TRUE),
+  answer("It makes the numbers more random."),
+  answer("It sets the number of simulations to 2027."),
+  answer("It chooses the 2027th element of the vector."),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q9}
+question(
+  lab_prompts[["q9"]],
+  answer("An error: you cannot take a sample of size 10 from 6 elements without replacement; use replace = TRUE.", correct = TRUE),
+  answer("It returns ten random dice rolls."),
+  answer("It returns the numbers 1 to 6 and four NAs."),
+  answer("It returns ten numbers equal to 6."),
+  allow_retry = TRUE,
+  random_answer_order = TRUE
+)
+```
+
+```{r q10}
+question_text(
+  lab_prompts[["q10"]],
+  open_answer(),
+  placeholder = "Think about the number of repetitions...",
+  trim = TRUE
+)
+```
+
+
+## Submit
+
+Type your name, download the text file, and upload it. Submit the questions first so the file contains your answers. If nothing downloads, the same `.txt` is in this folder: select it in the Files pane and choose Export.
+
+```{r submit-ui, echo=FALSE}
+shiny::textInput("student_name", "Your name", placeholder = "Name Surname")
+shiny::downloadButton("download_txt", "Download submission .txt")
+```
+
+```{r submit-server, context="server"}
+output$download_txt <- shiny::downloadHandler(
+  filename = function() lab_submission_filename(input$student_name, lab_meta$id),
+  content = function(file) {
+    write_lab_submission(
+      path = file,
+      name = input$student_name,
+      lab_id = lab_meta$id,
+      lab_title = lab_meta$title,
+      state = learnr::get_tutorial_state(),
+      prompts = lab_prompts,
+      open = lab_meta$open
+    )
+    # The viewer in Posit Cloud often blocks the browser download.
+    file.copy(
+      file,
+      lab_submission_filename(input$student_name, lab_meta$id),
+      overwrite = TRUE
+    )
+  }
+)
+```

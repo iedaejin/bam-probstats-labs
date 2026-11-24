@@ -1,0 +1,164 @@
+---
+title: "Lab 00 — Introduction to R"
+subtitle: "Session 5: R, RStudio, R Markdown and a first simulation"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# Learning goals
+
+In this lab you will:
+
+- install R and RStudio, and work inside an RStudio project;
+- create vectors and data frames, write a small function, and make basic plots;
+- read a csv file and summarise it;
+- knit an R Markdown document to HTML;
+- use `sample()` to run a first simulation (rolling dice).
+
+Work in pairs. Plan for 60 minutes.
+
+# Installing and starting
+
+1. Install **R** (<https://cran.r-project.org>) and **RStudio Desktop** (<https://posit.co/download/rstudio-desktop/>). Alternatively use Posit Cloud.
+2. Double-click `Lab_00_Intro_R.Rproj`. RStudio opens with the lab folder as the working directory, so the relative path `data/mtcars.csv` works. Never use `setwd()`.
+3. Install the course packages once: `source("../install_course_packages.R")` (the script is in the parent folder of the lab). In Posit Cloud, open the whole repository as the project, or run `install.packages(c("rmarkdown", "knitr", "learnr", "shiny", "MASS", "car"))`.
+
+Check where you are:
+
+```{r}
+getwd()
+list.files("data")
+```
+
+# R as a calculator and vectors
+
+```{r}
+2 + 3 * 4
+sqrt(16); exp(1); log(100, base = 10)
+choose(5, 2); factorial(5)
+
+x <- c(3, 7, 1, 9, 4)        # a numeric vector
+x[2]; x[2:4]; x[x > 3]
+length(x); sum(x); mean(x); sd(x)
+1:10
+seq(0, 1, by = 0.25)
+rep(c("a", "b"), times = 3)
+x * 2                         # operations work element by element
+```
+
+**Your turn.** Create a vector `y` with the numbers 2, 4, 6, ..., 20 using `seq()`. Compute its mean and its variance, and the proportion of elements larger than 10.
+
+# Data frames
+
+```{r}
+cars_df <- read.csv("data/mtcars.csv")
+str(cars_df)
+head(cars_df)
+dim(cars_df)
+summary(cars_df$mpg)
+```
+
+`mtcars` has 32 cars. `mpg` is fuel consumption in miles per gallon, `wt` the weight in thousands of pounds, `cyl` the number of cylinders and `am` the transmission (0 automatic, 1 manual).
+
+```{r}
+cars_df$am <- factor(cars_df$am, labels = c("automatic", "manual"))
+cars_df$cyl <- factor(cars_df$cyl)
+table(cars_df$cyl)
+table(cars_df$cyl, cars_df$am)
+mean(cars_df$mpg[cars_df$am == "manual"])
+tapply(cars_df$mpg, cars_df$am, mean)
+subset(cars_df, mpg > 30, select = c(car, mpg, cyl))
+```
+
+**Your turn.** Find the car with the largest `hp` (horsepower). Use `which.max()`. Then compute the mean `mpg` for each number of cylinders with `tapply()`.
+
+# Functions
+
+A function packs a calculation so that you can reuse it.
+
+```{r}
+cv <- function(x) sd(x) / mean(x)     # coefficient of variation
+cv(cars_df$mpg)
+
+describe <- function(x) {
+  c(n = length(x), mean = mean(x), sd = sd(x),
+    min = min(x), median = median(x), max = max(x))
+}
+round(describe(cars_df$mpg), 2)
+sapply(cars_df[, c("mpg", "hp", "wt")], describe)
+```
+
+**Your turn.** Write a function `standardize(x)` that returns $(x-\bar x)/s$. Check that the result has mean 0 and standard deviation 1.
+
+# Basic plots
+
+```{r}
+hist(cars_df$mpg, breaks = 8, col = "grey85", border = "white",
+     main = "Fuel consumption", xlab = "miles per gallon")
+boxplot(mpg ~ cyl, data = cars_df, xlab = "cylinders", ylab = "mpg")
+plot(cars_df$wt, cars_df$mpg, pch = 19, xlab = "weight (1000 lb)", ylab = "mpg")
+abline(lm(mpg ~ wt, data = cars_df), col = "red", lwd = 2)
+barplot(table(cars_df$cyl), xlab = "cylinders", ylab = "number of cars")
+```
+
+**Your turn.** Make a scatter plot of `mpg` against `hp`, colour the points by transmission (`col = cars_df$am`), and add a legend with `legend()`.
+
+# R Markdown
+
+This file is an R Markdown document (`.Rmd`): text written in Markdown, mixed with R chunks. To turn it into a report:
+
+- in RStudio, click **Knit**; or
+- in the console, `rmarkdown::render("lab.Rmd")`.
+
+The result is `lab.html`, a report with the code and its output. The header between the two `---` lines sets the title and the output format. Markdown basics: `# Heading`, `**bold**`, `*italics*`, lists with `-`, and math in dollar signs, for example $P(A\cap B)=P(A)P(B\mid A)$.
+
+**Your turn.** Add a new heading at the end of this file called "My notes" with two sentences about what you found in `mtcars`, and knit the document.
+
+# Random numbers and `sample()`
+
+`sample(x, size, replace)` draws from the elements of `x`. Rolling a fair die once, then ten times:
+
+```{r}
+set.seed(2027)                 # makes the "random" numbers reproducible
+sample(1:6, 1)
+sample(1:6, 10, replace = TRUE)
+```
+
+A simulation repeats an experiment many times and summarises the outcomes. We roll a die 6000 times and count how often each face appears:
+
+```{r}
+set.seed(2027)
+rolls <- sample(1:6, 6000, replace = TRUE)
+table(rolls)
+prop.table(table(rolls))
+barplot(table(rolls) / 6000, ylim = c(0, 0.25), xlab = "face", ylab = "relative frequency")
+abline(h = 1/6, lty = 2, col = "red")
+```
+
+Every face has relative frequency near $1/6 = 0.1667$. Now the sum of two dice:
+
+```{r}
+set.seed(2027)
+two <- sample(1:6, 10000, replace = TRUE) + sample(1:6, 10000, replace = TRUE)
+est <- table(two) / 10000
+exact <- c(1:6, 5:1) / 36
+round(rbind(simulated = est, exact = exact), 3)
+mean(two == 7)                 # estimate of P(sum = 7) = 6/36
+```
+
+Because `two == 7` is TRUE or FALSE, its mean is the proportion of TRUEs.
+
+**Your turn.**
+
+1. Estimate $P(\text{at least one six in four rolls of a die})$ with 10000 repetitions. Use `replicate(10000, any(sample(1:6, 4, replace = TRUE) == 6))` and compare with $1-(5/6)^4$.
+2. Change `set.seed(2027)` to another number. How much does the estimate move?
+
+# Wrap-up
+
+You can now start R in a project, handle vectors and data frames, write a function, draw base plots, knit an R Markdown file and run a small simulation. In the tutorial you check these skills.
