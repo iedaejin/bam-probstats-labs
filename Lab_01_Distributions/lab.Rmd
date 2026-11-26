@@ -182,7 +182,7 @@ qexp(0.5, 4)                            # median = log(2) / 4
 log(2) / 4
 ```
 
-The sum of $k$ independent exponential waiting times is gamma with shape $k$. The gamma function has mean `shape / rate` and variance `shape / rate^2`.
+The sum of $k$ independent exponential waiting times is gamma with shape $k$. The gamma distribution has mean `shape / rate` and variance `shape / rate^2`.
 
 ```{r}
 pgamma(1, shape = 3, rate = 4)          # P(third call arrives within one hour)
